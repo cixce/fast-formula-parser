@@ -304,15 +304,15 @@ class Parsing extends EmbeddedActionsParser {
             // console.log('try arguments')
 
             // allows ',' in the front
-            $.MANY2(() => {
-                $.CONSUME2(Comma);
-            });
+            $.MANY(() => 
+                $.OR([{ALT: () => $.CONSUME(Comma)}, { ALT: () => $.CONSUME(Semicolon)}])
+            );
             const args = [];
             // allows empty arguments
             $.OPTION(() => {
                 args.push($.SUBRULE($.formulaWithBinaryOp));
                 $.MANY(() => {
-                    $.CONSUME1(Comma);
+                    $.OR([{ALT: () => $.CONSUME(Comma)}, { ALT: () => $.CONSUME(Semicolon)}])
                     args.push(null); // e.g. ROUND(1.5,)
                     $.OPTION3(() => {
                         args.pop();
@@ -381,7 +381,7 @@ class Parsing extends EmbeddedActionsParser {
 
         $.RULE('prefixName', () => $.OR([
             {ALT: () => $.CONSUME(Sheet).image.slice(0, -1)},
-            {ALT: () => $.CONSUME(SheetQuoted).image.slice(1, -2).replace(/''/g, "'")},
+            {ALT: () => $.CONSUME(SheetQuoted).image.replace('$','').slice(1, -2).replace(/''/g, "'")},
         ]));
 
         this.performSelfAnalysis();

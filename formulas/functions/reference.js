@@ -158,10 +158,14 @@ const ReferenceFunctions = {
     // Special
     INDEX: (context, ranges, rowNum, colNum, areaNum) => {
         // retrieve values
-        rowNum = context.utils.extractRefValue(rowNum);
-        rowNum = {value: rowNum.val, isArray: rowNum.isArray};
-        rowNum = H.accept(rowNum, Types.NUMBER);
-        rowNum = Math.trunc(rowNum);
+        if(rowNum === null) {
+          rowNum === 1;
+        } else {
+           rowNum = context.utils.extractRefValue(rowNum);
+           rowNum = {value: rowNum.val, isArray: rowNum.isArray};
+           rowNum = H.accept(rowNum, Types.NUMBER);
+           rowNum = Math.trunc(rowNum);
+        }
 
         if (colNum == null) {
             colNum = 1;
@@ -215,7 +219,7 @@ const ReferenceFunctions = {
                 if (range.ref.to.row - range.ref.from.row < rowNum - 1)
                     throw FormulaError.REF;
                 range.ref.from.row += rowNum - 1;
-                range.ref.to.row =  range.ref.from.row;
+                range.ref.to.row = range.ref.from.row;
                 return range;
             } else if (Array.isArray(range)) {
                 return range[colNum - 1];
@@ -228,14 +232,14 @@ const ReferenceFunctions = {
                 range = range.ref;
                 if (range.to.row - range.from.row < rowNum - 1 || range.to.col - range.from.col < colNum - 1)
                     throw FormulaError.REF;
-                return {ref: {row: range.from.row + rowNum - 1, col: range.from.col + colNum - 1}};
+                return {ref: {sheet: range.sheet, row: range.from.row + rowNum - 1, col: range.from.col + colNum - 1}};
             }
             // cell reference
             else if (H.isCellRef(range)) {
                 range = range.ref;
                 if (rowNum > 1 || colNum > 1)
                     throw FormulaError.REF;
-                return {ref: {row: range.row + rowNum - 1, col: range.col + colNum - 1}};
+                return {ref: {sheet: range.sheet, row: range.row + rowNum - 1, col: range.col + colNum - 1}};
             }
             // array constant
             else if (Array.isArray(range)) {
@@ -246,9 +250,42 @@ const ReferenceFunctions = {
         }
     },
 
-    MATCH: () => {
-
+    MATCH: (context, value, range, type) => {
+      value = H.accept(value);
+      range = H.accept(range);
+      type = H.accept(type);
+      const v = String(value).toLowerCase();
+      if(!type) {
+        if(range.length === 1) {
+          const d = range[0];
+          for(let i = 0; i < d.length; i+=1) {
+            let tv = d[i];
+            if(v === String(tv).toLowerCase()) {
+              return i+1;
+            }
+          }
+        } else {
+          const d = range;
+          for(let i = 0; i < d.length; i+=1) {
+            let tv = d[i][0];
+            if(v === String(tv).toLowerCase()) {
+              return i+1;
+            }
+          }
+        }
+        return FormulaError.NA;
+      }
     },
+
+  OFFSET: (context, reference, rows, cols, height, width) => {
+    const col = reference.ref.col + cols;
+    const row = reference.ref.row + rows;
+    // return context.utils.extractRefValue(reference);
+    const ref = { ref: {  ...reference.ref, address: `${Address.columnNumberToName(col)}${row}`, col , row }};
+    const val = context.utils.extractRefValue(ref);
+    return val.val || '';
+  },
+
 
     // Special
     ROW: (context, obj) => {

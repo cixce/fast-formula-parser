@@ -270,6 +270,10 @@ const MathFunctions = {
         return MathFunctions['CEILING.PRECISE'](...params);
     },
 
+    ISODD: (v) => {
+      return Math.floor(v.value)/2 === 1;
+    },
+
     LCM: (...params) => {
         const arr = [];
         // always parse string to number if possible
@@ -342,7 +346,32 @@ const MathFunctions = {
 
         return det;
     },
-
+    MAX: (context, ...params) => {
+      const values = params.reduce((a, p) => {
+        const r = typeof p === 'object'? H.retrieveArg(context, p).value : p;
+        if(Array.isArray(r)) {
+          return [...a, ...(H.flattenDeep(r))];
+        }
+        return [...a, r];
+      }, []);
+      if(values.length === 0) {
+        return 0;
+      }
+      return values.filter((v) => typeof v === 'number'  ).reduce((a, v) => a > v ? a : v, values[0]);
+    },
+    MIN: (context, ...params) => {
+      const values = params.reduce((a, p) => {
+        const r = typeof p === 'object'? H.retrieveArg(context, p).value : p;
+        if(Array.isArray(r)) {
+          return [...a, ...H.flattenDeep(r)];
+        }
+        return [...a, r];
+      }, []);
+      if(values.length === 0) {
+        return 0;
+      }
+      return values.filter((v) => typeof v === 'number'  ).reduce((a, v) => a < v ? a : v, values[0]);
+    },
     MINVERSE: (array) => {
         // TODO
         // array = H.accept(array, Types.ARRAY, null, false);

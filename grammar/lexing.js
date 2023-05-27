@@ -22,7 +22,7 @@ const SingleQuotedString = createToken({
 
 const SheetQuoted = createToken({
     name: 'SheetQuoted',
-    pattern: /'((?![\\\/\[\]*?:]).)+?'!/
+    pattern: /[$]?'((?![\\\/\[\]*?:]).)+?'[.!]/
 });
 
 const Function = createToken({
