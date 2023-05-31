@@ -1,5 +1,5 @@
 const FormulaError = require('../formulas/error');
-const {FormulaHelpers} = require('../formulas/helpers');
+const {Types, FormulaHelpers} = require('../formulas/helpers');
 
 const Prefix = {
     unaryOp: (prefixes, value, isArray) => {
@@ -126,18 +126,10 @@ const Infix = {
     },
 
     mathOp: (value1, infix, value2, isArray1, isArray2) => {
-        if (value1 == null) value1 = 0;
-        if (value2 == null) value2 = 0;
-
-        try {
-            value1 = FormulaHelpers.acceptNumber(value1, isArray1);
-            value2 = FormulaHelpers.acceptNumber(value2, isArray2);
-        } catch (e) {
-            if (e instanceof FormulaError)
-                return e;
-            throw e;
-        }
-
+      if (value1 == null) value1 = 0;
+      if (value2 == null) value2 = 0;
+      
+      const infixOp = (value1, infix, value2) => {
         switch (infix) {
             case '+':
                 return value1 + value2;
@@ -154,8 +146,57 @@ const Infix = {
         }
 
         throw Error('Infix.mathOp: Should not reach here.');
-    },
+      }
 
+      if(isArray1 || Array.isArray(value1)) {
+          value1 = FormulaHelpers.accept(value1, Types.ARRAY, undefined, false, true);
+          if(isArray2 || Array.isArray(value2)) {
+            value2 = FormulaHelpers.accept(value, Types.ARRAY, undefined, false, true);
+            if (value1[0].length !== value2[0].length || value1.length !== value2.length)
+                throw FormulaError.VALUE;
+            for (let i = 0; i < value1.length; i++) {
+                for (let j = 0; j < value1[0].length; j++) {
+                    if (typeof value1[i][j] !== "number")
+                        value1[i][j] = 0;
+                    if (typeof value2[i][j] !== "number")
+                        value2[i][j] = 0;
+                    value1[i][j]=infixOp(value1[i][j], value2[i][j]);
+                }
+            }
+          } else {
+            value2 = FormulaHelpers.acceptNumber(value2, isArray2);
+            for (let i = 0; i < value1.length; i++) {
+                for (let j = 0; j < value1[0].length; j++) {
+                    if (typeof value1[i][j] !== "number")
+                        value1[i][j] = 0;
+                    value1[i][j]=infixOp(value1[i][j], infix, value2);
+                }
+            }
+          }
+        return value1;
+
+        // FormulaHelpers.flattenParams(value1, Types.NUMBER, false, (i) => arr1.push(i));
+        // if(isArray2 || Array.isArray(value2)) {
+        //   if(value1.length != value2.length) {
+        //     throw FormulaError.VALUE;
+        //   }
+        //   FormulaHelpers.flattenParams(value2, Types.NUMBER, false, (i) => arr2.push(i));
+        // } else {
+        //   value2 = FormulaHelpers.acceptNumber(value2, isArray2);
+        //   arr2 = Array(value1.length).fill(value2);
+        // }
+        // return arr1.map((v, i) => infixOp(v, infix,  arr2[i]));
+      }
+        try {
+            value1 = FormulaHelpers.acceptNumber(value1, isArray1);
+            value2 = FormulaHelpers.acceptNumber(value2, isArray2);
+        } catch (e) {
+            if (e instanceof FormulaError)
+                return e;
+            throw e;
+        }
+      return infixOp(value1, infix, value2);
+    },
 };
 
 module.exports = {

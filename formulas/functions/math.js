@@ -82,6 +82,27 @@ const MathFunctions = {
     },
 
     CEILING: (number, significance) => {
+      if(number.isArray) {
+        const arr = [];
+        H.flattenParams(number.value, Types.NUMBER, false, (param) => arr.push(param) , 0);
+        significance = H.accept(significance, Types.NUMBER);
+        return arr.map((n) => {
+          n = H.accept(n, Types.NUMBER);
+          if (significance === 0)
+              return 0;
+          if (n / significance % 1 === 0)
+              return n;
+          const absSignificance = Math.abs(significance);
+          const times = Math.floor(Math.abs(n) / absSignificance);
+          if (n < 0) {
+              // round down, away from zero
+              const roundDown = significance < 0;
+              return roundDown ? -absSignificance * (times + 1) : -absSignificance * (times);
+          } else {
+              return (times + 1) * absSignificance;
+          }
+        });
+      } else {
         number = H.accept(number, Types.NUMBER);
         significance = H.accept(significance, Types.NUMBER);
         if (significance === 0)
@@ -97,6 +118,7 @@ const MathFunctions = {
         } else {
             return (times + 1) * absSignificance;
         }
+      }
     },
 
     'CEILING.MATH': (number, significance, mode) => {
@@ -686,7 +708,6 @@ const MathFunctions = {
             }
         });
         let result = 0;
-
         array1.forEach(row => {
             row.forEach(value => {
                 result += value;
