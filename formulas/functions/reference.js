@@ -339,31 +339,54 @@ const ReferenceFunctions = {
         return result;
     },
 
-    VLOOKUP: (lookupValue, tableArray, colIndexNum, rangeLookup) => {
+    VLOOKUP: (context, lookupValue, tableArrayRef, colIndexNum, rangeLookup) => {
         // preserve type of lookupValue
+        lookupValue = context.utils.extractRefValue(lookupValue);
+        lookupValue = {value: lookupValue.val, isArray: lookupValue.isArray};
         lookupValue = H.accept(lookupValue);
+        if(!H.isRangeRef(tableArrayRef)) {
+          throw FormulaError.NA;
+        }
+        colIndexNum = context.utils.extractRefValue(colIndexNum);
+        colIndexNum = {value: colIndexNum.val, isArray: colIndexNum.isArray};
+        colIndexNum = H.accept(colIndexNum, Types.NUMBER) - 1;
+        rangeLookup = context.utils.extractRefValue(rangeLookup);
+        rangeLookup = {value: rangeLookup.val, isArray: rangeLookup.isArray};
+        rangeLookup = H.accept(rangeLookup, Types.BOOLEAN, true);
+
+        // check if colIndexNum out of bound
+        if (colIndexNum < 1)
+            throw FormulaError.VALUE;
+        // if (tableArray.ref.to.row[colIndexNum - 1] === undefined)
+        //     throw FormulaError.REF;
+
+        const lookupType = typeof lookupValue; // 'number', 'string', 'boolean'
+        const { ref } = tableArrayRef;
+        let tableArray;
         try {
-            tableArray = H.accept(tableArray, Types.ARRAY, undefined, false);
+          const tableArray = context.onRange({ 
+            ...ref,
+            to: {
+              col: ref.from.col,
+              row: ref.to.row,
+            }
+          });
         } catch (e) {
             // catch #VALUE! and throw #N/A
             if (e instanceof FormulaError)
                 throw FormulaError.NA;
             throw e;
         }
-        colIndexNum = H.accept(colIndexNum, Types.NUMBER);
-        rangeLookup = H.accept(rangeLookup, Types.BOOLEAN, true);
-
-        // check if colIndexNum out of bound
-        if (colIndexNum < 1)
-            throw FormulaError.VALUE;
-        if (tableArray[0][colIndexNum - 1] === undefined)
-            throw FormulaError.REF;
-
-        const lookupType = typeof lookupValue; // 'number', 'string', 'boolean'
 
         // approximate lookup (assume the array is sorted)
         if (rangeLookup) {
-            let prevValue = lookupType === typeof tableArray[0][0] ? tableArray[0][0] : null;
+            let prevValue = lookupType === typeof tableArray[0][0] ?{
+                  ref: {
+                    sheet: ref.sheet,
+                    col: ref.from.col + colIndexNum,
+                    row: ref.from.row,
+                  }
+                }  : null;
             for (let i = 1; i < tableArray.length; i++) {
                 const currRow = tableArray[i];
                 const currValue = tableArray[i][0];
@@ -376,17 +399,35 @@ const ReferenceFunctions = {
                     throw FormulaError.NA;
                 }
                 if (currValue === lookupValue)
-                    return currRow[colIndexNum - 1];
+                    return {
+                      ref: {
+                        sheet: ref.sheet,
+                        col: ref.from.col + colIndexNum,
+                        row: ref.from.row + i,
+                      }
+                    };
                 // if previous value <= lookup value and current value > lookup value
                 if (prevValue != null && currValue > lookupValue && prevValue <= lookupValue) {
-                    return tableArray[i - 1][colIndexNum - 1];
+                    return {
+                      ref: {
+                        sheet: ref.sheet,
+                        col: ref.from.col + colIndexNum,
+                        row: ref.from.row + i-1,
+                      }
+                    };
                 }
                 prevValue = currValue;
             }
             if (prevValue == null)
                 throw FormulaError.NA;
             if (tableArray.length === 1) {
-                return tableArray[0][colIndexNum - 1]
+                return {
+                  ref: {
+                    sheet: ref.sheet,
+                    col: ref.from.col + colIndexNum,
+                    row: ref.from.row,
+                  }
+                };
             }
             return prevValue;
         }
@@ -404,7 +445,13 @@ const ReferenceFunctions = {
             }
             // the exact match is not found
             if (index === -1) throw FormulaError.NA;
-            return tableArray[index][colIndexNum - 1];
+            return {
+              ref: {
+                sheet: ref.sheet,
+                col: ref.from.col + colIndexNum,
+                row: ref.from.row + index,
+              }
+            };
         }
     },
 };
