@@ -364,7 +364,7 @@ const ReferenceFunctions = {
         const { ref } = tableArrayRef;
         let tableArray;
         try {
-          const tableArray = context.onRange({ 
+          tableArray = context.onRange({ 
             ...ref,
             to: {
               col: ref.from.col,

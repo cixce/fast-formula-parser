@@ -398,7 +398,7 @@ class Utils {
         }
 
         msg += '\n' + inputText.split('\n')[line - 1] + '\n';
-        msg += Array(column - 1).fill(' ').join('') + '^\n';
+        msg += Array(column - 1 || 1).fill(' ').join('') + '^\n';
         msg += `Error at position ${line}:${column}\n` + error.message;
         error.errorLocation = {line, column};
         return FormulaError.ERROR(msg, error);
